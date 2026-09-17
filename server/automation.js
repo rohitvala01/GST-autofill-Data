@@ -13,23 +13,28 @@ async function getBrowserContext() {
     return globalContext;
   }
 
-  console.log('[Playwright] Launching persistent Chromium browser window...');
+  // Detect headless mode (default to headless in cloud/production unless explicitly set)
+  const isHeadless = process.env.HEADLESS === 'true' || process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
+  console.log(`[Playwright] Launching Chromium browser window (headless: ${isHeadless})...`);
   globalBrowser = await chromium.launch({
-    headless: false,
+    headless: isHeadless,
     args: [
       '--start-maximized', 
       '--no-sandbox', 
-      '--disable-setuid-sandbox'
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage'
     ]
   });
 
   globalBrowser.on('disconnected', () => {
-    console.log('[Playwright] Browser closed by user.');
+    console.log('[Playwright] Browser closed.');
     globalBrowser = null;
     globalContext = null;
   });
 
-  globalContext = await globalBrowser.newContext({ viewport: null });
+  const contextOptions = isHeadless ? { viewport: { width: 1280, height: 800 } } : { viewport: null };
+  globalContext = await globalBrowser.newContext(contextOptions);
   return globalContext;
 }
 
@@ -81,24 +86,24 @@ export async function autoFillGstLogin({ username, password, gstin }) {
     throw new Error('Username and password are required for auto-fill');
   }
 
-  const context = await getBrowserContext();
-  const page = await context.newPage();
-
   let latestCaptchaBuffer = null;
 
-  // Intercept GST Captcha Image response directly from network stream
-  page.on('response', async (res) => {
-    if (res.url().includes('captcha')) {
-      try {
-        latestCaptchaBuffer = await res.body();
-        console.log('[Playwright] Intercepted Captcha Image from GST network stream!');
-      } catch (e) {
-        // ignore stream read error
-      }
-    }
-  });
-
   try {
+    const context = await getBrowserContext();
+    const page = await context.newPage();
+
+    // Intercept GST Captcha Image response directly from network stream
+    page.on('response', async (res) => {
+      if (res.url().includes('captcha')) {
+        try {
+          latestCaptchaBuffer = await res.body();
+          console.log('[Playwright] Intercepted Captcha Image from GST network stream!');
+        } catch (e) {
+          // ignore stream read error
+        }
+      }
+    });
+
     const targetUrl = 'https://services.gst.gov.in/services/login';
     console.log(`[Playwright] Navigating tab to ${targetUrl}...`);
 
