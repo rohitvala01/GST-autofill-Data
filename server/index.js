@@ -33,23 +33,44 @@ function parseExcelData(buffer) {
   // Convert sheet to JSON rows
   const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-  // Map flexible column headers (Name, GSTIN, Username, Password)
+  // Intelligent, flexible column header matcher
   const parsedHolders = rawData.map((row, index) => {
     const keys = Object.keys(row);
 
-    const nameKey = keys.find(k => /name|firm|holder|client|company/i.test(k)) || keys[0] || `Client ${index + 1}`;
-    const gstinKey = keys.find(k => /gstin|gst|trade/i.test(k));
-    const usernameKey = keys.find(k => /user|username|id|login/i.test(k)) || keys[1];
-    const passwordKey = keys.find(k => /pass|password|pwd/i.test(k)) || keys[2];
+    // Filter out serial number / index columns (Sr No, S.No, #, Index) from primary name matching
+    const nonSrKeys = keys.filter(k => !/^(sr|s\.?no|serial|no|#|index)$/i.test(k.trim()));
+
+    // 1. Name Column Matcher
+    const nameKey = nonSrKeys.find(k => /name|firm|holder|client|company|party|trade|title|person/i.test(k)) 
+      || nonSrKeys[0] 
+      || keys[0] 
+      || `GST Holder ${index + 1}`;
+
+    // 2. Username Column Matcher
+    const usernameKey = keys.find(k => /username|user_name|userid|user_id|user|login_id|login|gst_user/i.test(k)) 
+      || keys.find(k => /id/i.test(k) && !/gstin|sr|serial/i.test(k))
+      || nonSrKeys.find(k => k !== nameKey && !/pass|pwd|gstin|mobile|email|address|phone|remark/i.test(k));
+
+    // 3. Password Column Matcher
+    const passwordKey = keys.find(k => /password|pass_word|pass|pwd|secret|pin|gst_pass/i.test(k)) 
+      || nonSrKeys.find(k => k !== nameKey && k !== usernameKey && !/gstin|mobile|email|address|phone|remark/i.test(k));
+
+    // 4. GSTIN Column Matcher (Optional)
+    const gstinKey = keys.find(k => /gstin|gst_no|gst_number|gst/i.test(k));
+
+    const nameVal = nameKey && row[nameKey] ? String(row[nameKey]).trim() : '';
+    const usernameVal = usernameKey && row[usernameKey] ? String(row[usernameKey]).trim() : '';
+    const passwordVal = passwordKey && row[passwordKey] ? String(row[passwordKey]).trim() : '';
+    const gstinVal = gstinKey && row[gstinKey] ? String(row[gstinKey]).trim() : '';
 
     return {
       id: index + 1,
-      name: String(row[nameKey] || `GST Holder ${index + 1}`).trim(),
-      gstin: gstinKey ? String(row[gstinKey]).trim() : '',
-      username: usernameKey ? String(row[usernameKey]).trim() : '',
-      password: passwordKey ? String(row[passwordKey]).trim() : ''
+      name: nameVal || usernameVal || `GST Holder ${index + 1}`,
+      gstin: gstinVal,
+      username: usernameVal,
+      password: passwordVal
     };
-  }).filter(item => item.username || item.name);
+  }).filter(item => item.name && (item.username || item.password || item.name !== `GST Holder ${item.id}`));
 
   return parsedHolders;
 }
