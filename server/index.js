@@ -23,7 +23,9 @@ const FIXED_EXCEL_PATH = fs.existsSync(path.join(__dirname, 'data.xlsx'))
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    return callback(null, true); // Allow all origins (Vercel, Localhost, etc.)
+  },
   credentials: true
 }));
 app.use(express.json());
