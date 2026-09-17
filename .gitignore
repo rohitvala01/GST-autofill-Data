@@ -9,8 +9,6 @@ client/dist/
 server/dist/
 
 # Environment files
-.env
-.env.local
 .env.*.local
 
 # Logs
@@ -22,6 +20,6 @@ yarn-error.log*
 # OS / Editor temporary files
 .DS_Store
 Thumbs.db
-.vscode/
 .idea/
 /tmp/
+config.bat
