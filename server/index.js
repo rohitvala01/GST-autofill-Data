@@ -16,8 +16,10 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Fixed Excel File Path in workspace root
-const FIXED_EXCEL_PATH = path.join(__dirname, '../data.xlsx');
+// Fixed Excel File Path (supports both local root & server container directory)
+const FIXED_EXCEL_PATH = fs.existsSync(path.join(__dirname, 'data.xlsx'))
+  ? path.join(__dirname, 'data.xlsx')
+  : path.join(__dirname, '../data.xlsx');
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 app.use(cors({
