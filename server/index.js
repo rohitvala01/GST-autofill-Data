@@ -7,6 +7,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { autoFillGstLogin, launchBrowserWithDashboard } from './automation.js';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -16,7 +19,11 @@ const __dirname = path.dirname(__filename);
 // Fixed Excel File Path in workspace root
 const FIXED_EXCEL_PATH = path.join(__dirname, '../data.xlsx');
 
-app.use(cors());
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+app.use(cors({
+  origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Configure Multer for file uploads (stored in memory)

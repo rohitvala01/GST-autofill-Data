@@ -10,6 +10,9 @@ import {
   ExternalLink
 } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const api = axios.create({ baseURL: API_BASE_URL });
+
 export default function App() {
   const [holders, setHolders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +23,7 @@ export default function App() {
   const fetchHoldersFromExcel = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/holders');
+      const response = await api.get('/api/holders');
       if (response.data.success) {
         setHolders(response.data.holders);
       }
@@ -45,7 +48,7 @@ export default function App() {
     showToast(`Launching browser & auto-filling credentials for ${holder.name}...`, 'loading');
 
     try {
-      const response = await axios.post('/api/autofill-login', {
+      const response = await api.post('/api/autofill-login', {
         name: holder.name,
         username: holder.username,
         password: holder.password,
